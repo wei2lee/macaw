@@ -102,21 +102,28 @@ open class MacawView: UIView, UIGestureRecognizerDelegate {
         self.animationCache = AnimationCache(sceneLayer: self.layer)
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(MacawView.handleTap))
+        let doubleTapRecognizer = UITapGestureRecognizer(target: self, action: #selector(MacawView.handleDoubleTap))
+        doubleTapRecognizer.numberOfTapsRequired = 2
         let panRecognizer = UIPanGestureRecognizer(target: self, action: #selector(MacawView.handlePan))
         let rotationRecognizer = UIRotationGestureRecognizer(target: self, action: #selector(MacawView.handleRotation))
         let pinchRecognizer = UIPinchGestureRecognizer(target: self, action: #selector(MacawView.handlePinch))
         
+        //tapRecognizer.require(toFail: doubleTapRecognizer)
+        
         tapRecognizer.delegate = self
+        doubleTapRecognizer.delegate = self
         panRecognizer.delegate = self
         rotationRecognizer.delegate = self
         pinchRecognizer.delegate = self
         
         tapRecognizer.cancelsTouchesInView = false
+        doubleTapRecognizer.cancelsTouchesInView = false
         panRecognizer.cancelsTouchesInView = false
         rotationRecognizer.cancelsTouchesInView = false
         pinchRecognizer.cancelsTouchesInView = false
         
         self.addGestureRecognizer(tapRecognizer)
+        self.addGestureRecognizer(doubleTapRecognizer)
         self.addGestureRecognizer(panRecognizer)
         self.addGestureRecognizer(rotationRecognizer)
         self.addGestureRecognizer(pinchRecognizer)
@@ -293,6 +300,42 @@ open class MacawView: UIView, UIGestureRecognizerDelegate {
             let loc = location.applying(RenderUtils.mapTransform(inverted))
             let event = TapEvent(node: node, location: Point(x: Double(loc.x), y: Double(loc.y)))
             node.handleTap(event)
+        }
+    }
+    
+    func handleDoubleTap(recognizer: UITapGestureRecognizer) {
+        if !self.node.shouldCheckForDoubleTap() {
+            return
+        }
+        
+        guard let renderer = renderer else {
+            return
+        }
+        
+        let location = recognizer.location(in: self)
+        var foundNodes = [Node]()
+        
+        localContext { ctx in
+            guard let foundNode = renderer.findNodeAt(location: location, ctx: ctx) else {
+                return
+            }
+            
+            var parent: Node? = foundNode
+            while parent != .none {
+                if parent!.shouldCheckForDoubleTap() {
+                    foundNodes.append(parent!)
+                }
+                
+                parent = nodesMap.parents(parent!).first
+            }
+        }
+        
+        
+        foundNodes.forEach { node in
+            let inverted = node.place.invert()!
+            let loc = location.applying(RenderUtils.mapTransform(inverted))
+            let event = TapEvent(node: node, location: Point(x: Double(loc.x), y: Double(loc.y)))
+            node.handleDoubleTap(event)
         }
     }
     

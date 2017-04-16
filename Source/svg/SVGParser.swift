@@ -80,11 +80,11 @@ open class SVGParser {
             if let element = child.element {
                 if element.name == "svg" {
                     var w:Double? = nil
-                    if let text = element.attribute(by: "width")?.text, let value = Double(text) {
+                    if let text = element.attribute(by: "width")?.text.replacingOccurrences(of:"px", with:""), let value = Double(text) {
                         w = value
                     }
                     var h:Double? = nil
-                    if let text = element.attribute(by: "height")?.text, let value = Double(text) {
+                    if let text = element.attribute(by: "height")?.text.replacingOccurrences(of:"px", with:""), let value = Double(text) {
                         h = value
                     }
                     if let w = w, let h = h {
